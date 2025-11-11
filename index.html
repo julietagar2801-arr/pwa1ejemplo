@@ -189,27 +189,22 @@
                         fr.readAsDataURL(file);
                     })
                 );
-                // Espera a que todas las imágenes se lean y retorna con resultados
                 return Promise.all(readers);
         }
 
         // Función para mostrar las tarjetas de productos en la página
         function renderProducts() {
-            // Obtiene el contenedor donde van las tarjetas
             const container = document.getElementById('productsContainer');
-            // Limpia todo el contenido anterior
             container.innerHTML = '';
 
-            // Función interna para determinar el color del badge según cantidad en stock
+            // Función interna para determinar el color según cantidad en stock
             const stockClasses = (stock) => {
                 if (stock == 0) return 'danger'; // Rojo si no hay stock (agotado)
                 if (stock < 5) return 'warning'; // Amarillo si hay poco stock (advertencia)
                 return 'success'; // Verde si hay buen stock (disponible)
             };
 
-            // Recorre cada producto del array y crea su tarjeta HTML
             productos.forEach((producto, idx) => {
-                // Crea un div columna responsive (1 col móvil, 2 tablet, 3 desktop)
                 const col = document.createElement('div');
                 col.className = 'col-md-6 col-lg-4 mb-4';
 
@@ -217,70 +212,54 @@
                 const thumbs = (producto.imagenes || []).slice(0, 3)
                 .map((img) => `<img class="thumb w-100" src="${img.dataURL}" alt="${producto.nombre}" />`)
                 .join('');
-                
-                // Si hay más de 3 imágenes, calcula cuántas más hay
                 const extraCount = (producto.imagenes?.length || 0) - 3;
-                // Crea un badge gris que dice "+X más" si hay imágenes extra
                 const extraBadge = extraCount > 0 ? `<span class="badge bg-secondary">+${extraCount} más</span>` : '';
 
                 // Crea el HTML completo de la tarjeta del producto
                 col.innerHTML = `
                     <div class="card h-100 shadow-sm" style="border: 2px solid #5B88B2;">
-                        <!-- Encabezado de la tarjeta con color azul claro y texto blanco -->
                         <div class="card-header d-flex align-items-center justify-content-between" style="background-color: #5B88B2; color: white;">
                             <h5 class="card-title mb-0">${producto.nombre}</h5>
-                            <!-- Botón para eliminar el producto -->
+                            <!--Botón para eliminar el producto-->
                             <button class="btn btn-sm btn-light" data-action="delete" data-index="${idx}" title="Eliminar">
                                 <i class="bi bi-trash3"></i>
                             </button>
                         </div>
-                        <!-- Cuerpo de la tarjeta con fondo crema -->
                         <div class="card-body" style="background-color: #FBF9E4;">
-                            <!-- Información del producto: clave, precio y stock -->
+                            <!--Informacion del producto: clave, precio y stock-->
                             <p class="card-text mb-2">
                                 <strong>Clave:</strong> ${producto.clave}<br />
                                 <strong>Precio:</strong> ${currencyMX(producto.precio)}<br />
                                 <strong>Stock:</strong> ${producto.stock} Unidades
                             </p>
-                            <!-- Muestra descripción solo si existe -->
                             ${producto.descripcion ? `<p class="card-text text-muted"><small>${producto.descripcion}</small></p>` : ''}
-                            <!-- Muestra imágenes en grid o mensaje "Sin imágenes" -->
                             ${producto.imagenes && producto.imagenes.length 
                                 ? `<div class="thumbs-grid mt-2">${thumbs}</div>${extraBadge ? `<div class="mt-2">${extraBadge}</div>` : ''}`
                                 : `<div class="text-muted"><em>Sin imágenes</em></div>`}
                         </div>
-                        <!-- Pie de la tarjeta con badge de disponibilidad -->
                         <div class="card-footer" style="background-color: #FBF9E4;">
                             <span class="badge bg-${stockClasses(producto.stock)} w-100">Stock: ${producto.stock > 0 ? 'Disponible' : 'Agotado'}</span>
                         </div>
                     </div>`;
 
-                // Agrega la tarjeta al contenedor principal
                 container.appendChild(col);
             });
 
             // Agrega evento click a todos los botones de eliminar
             container.querySelectorAll('[data-action="delete"]').forEach((btn) => {
                 btn.addEventListener('click', (e) => {
-                    // Obtiene el índice del producto a eliminar
                     const i = Number(e.currentTarget.getAttribute('data-index'));
-                    // Elimina el producto del array en esa posición
                     productos.splice(i, 1);
-                    // Guarda los cambios en LocalStorage
                     saveToLS();
-                    // Vuelve a dibujar todas las tarjetas
                     renderProducts();
                 });
             });
         }
 
-        // Función para mostrar notificaciones toast (mensajes emergentes temporales)
         function showToast(msg, type = 'success') {
-            // Crea un elemento div para el toast
             const toast = document.createElement('div');
             // Agrega clases de Bootstrap: verde para success, rojo para error
             toast.className ='toast align-items-center text-bg-' + (type === 'success' ? 'success' : 'danger') + ' position-fixed top-0 end-0 m-3';
-            // Atributos para accesibilidad
             toast.setAttribute('role', 'alert');
             toast.setAttribute('aria-live', 'assertive');
             toast.setAttribute('aria-atomic', 'true');
@@ -290,79 +269,56 @@
                     <div class="toast-body">${msg}</div>
                     <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                 </div>`;
-            // Agrega el toast al body de la página
             document.body.appendChild(toast);
-            // Inicializa el toast de Bootstrap
             const bsToast = new bootstrap.Toast(toast);
-            // Muestra el toast
-            bsToast.show();
-            // Elimina el toast del DOM después de 3.5 segundos
             setTimeout(() => toast.remove(), 3500);
         }
 
-        // Evento que se ejecuta al enviar el formulario de producto
         document.getElementById('productoForm').addEventListener('submit', async function (e) {
-            // Evita que la página se recargue (comportamiento por defecto del form)
             e.preventDefault();
 
-            // Obtiene el input de imágenes
             const imagenesInput = document.getElementById('imagenesProducto');
-            // Variable para almacenar las imágenes leídas
             let imagenes = [];
             try {
-                // Lee todas las imágenes seleccionadas y las convierte a base64
                 imagenes = await readFilesAsDataURLs(imagenesInput.files);
             } catch (err) {
                 // Si hay error leyendo las imágenes, lo muestra en consola
                 console.error('Error leyendo imágenes', err);
-                // Muestra notificación de error al usuario
                 showToast('Hubo un problema leyendo las imágenes', 'error');
             }
 
             // Crea el objeto producto con todos los datos del formulario
             const producto = {
-                id: crypto.randomUUID(), // Genera un ID único universal
+                id: crypto.randomUUID(), // Genera un ID único
                 clave: document.getElementById('claveProducto').value.trim(), // Obtiene clave sin espacios
                 nombre: document.getElementById('nombreProducto').value.trim(), // Obtiene nombre sin espacios
                 precio: parseFloat(document.getElementById('precioProducto').value), // Convierte a número decimal
                 stock: parseInt(document.getElementById('stockProducto').value, 10), // Convierte a número entero
                 descripcion: document.getElementById('descripcionProducto').value.trim(), // Obtiene descripción sin espacios
-                imagenes, // Array de objetos {name, type, dataURL}
+                imagenes, //{name, type, dataURL}
             };
 
-            // Agrega el nuevo producto al final del array
             productos.push(producto);
-            // Guarda el array actualizado en LocalStorage
             saveToLS();
-            // Re-dibuja todas las tarjetas incluyendo la nueva
             renderProducts();
 
             // Limpia todos los campos del formulario
             this.reset();
-            // Cierra el modal
             modal.hide();
-            // Muestra notificación de éxito
             showToast('Producto guardado correctamente');
         });
 
-        // Evento que se ejecuta cuando la página termina de cargar completamente
         document.addEventListener('DOMContentLoaded', () => {
-            // Carga los productos guardados previamente en LocalStorage
             loadFromLS();
-            // Muestra todas las tarjetas de productos
             renderProducts();
 
             // Funcionalidad del botón "Limpiar todo"
             document.getElementById('clearAll').addEventListener('click', () => {
                 // Pide confirmación al usuario antes de borrar
                 if (confirm('¿Seguro que deseas borrar todos los productos guardados en este navegador?')) {
-                    // Vacía el array de productos
                     productos = [];
-                    // Guarda el array vacío (borra datos del LocalStorage)
                     saveToLS();
-                    // Re-dibuja las tarjetas (no habrá ninguna)
                     renderProducts();
-                    // Muestra notificación de confirmación
                     showToast('LocalStorage limpiado');
                 }
             });
@@ -372,63 +328,42 @@
     <button id="btnInstall" hidden>Instalar app</button>
 
 <script>
-// Registra el Service Worker (archivo que permite funcionalidad offline de PWA)
+// Registra el Service Worker 
 if ('serviceWorker' in navigator) {
-  // Espera a que la página cargue completamente
   window.addEventListener('load', () => {
-    // Registra el archivo sw.js como service worker
     navigator.serviceWorker.register('./sw.js')
-      // Si se registra correctamente, muestra mensaje en consola
       .then(reg => console.log('SW registrado:', reg.scope))
-      // Si falla, muestra advertencia en consola
       .catch(err => console.warn('SW fallo:', err));
   });
 }
 
-// Variable para guardar el evento de instalación
 let deferredPrompt = null;
-// Evento que se dispara cuando el navegador permite instalar la PWA
 window.addEventListener('beforeinstallprompt', (e) => {
-  // Evita que el navegador muestre automáticamente el diálogo de instalación
   e.preventDefault();
-  // Guarda el evento para usarlo después cuando el usuario haga click
   deferredPrompt = e;
-  // Obtiene el botón de instalación
   const btn = document.getElementById('btnInstall');
-  // Muestra el botón (quita el atributo hidden)
   if (btn) btn.hidden = false;
 });
 
-// Evento click en cualquier parte del documento
 document.addEventListener('click', async (e) => {
-  // Verifica si el click fue en el botón de instalar
   if (e.target && e.target.id === 'btnInstall') {
-    // Si no hay evento guardado, no hace nada
     if (!deferredPrompt) return;
-    // Deshabilita el botón temporalmente
     e.target.disabled = true;
-    // Muestra el diálogo de instalación del navegador
     deferredPrompt.prompt();
-    // Espera la respuesta del usuario (aceptó o rechazó)
     const { outcome } = await deferredPrompt.userChoice;
-    // Muestra en consola si aceptó o rechazó
     console.log('Instalación:', outcome);
-    // Limpia el evento guardado
     deferredPrompt = null;
     // Oculta el botón después de intentar instalar
     e.target.hidden = true;
   }
 });
 
-// Evento que se dispara cuando la app fue instalada exitosamente
 window.addEventListener('appinstalled', () => {
-  // Muestra mensaje en consola
   console.log('PWA instalada');
-  // Obtiene el botón
   const btn = document.getElementById('btnInstall');
-  // Oculta el botón porque ya está instalada
   if (btn) btn.hidden = true;
 });
 </script>
 </body>
 </html>
+
